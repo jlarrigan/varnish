@@ -94,10 +94,15 @@ An upstream fix enters the work order if it collapses **any** `fix`-verdict find
 7. **Deferred** — each with its trigger (carried defers keep original date + trigger).
 8. **Disputed** — each: why, and the note that the next audit re-verifies these first.
 9. **Version stamp** — `remediation-plan.md v<version> · run <date>`.
+10. **Author footer** — the same closing line every Audit report carries (see `_report-shape.md`).
+
+**Contain first.** If any input report has a 🚨 Contain-today section, those items go **above the work order as Phase 0, today**, in plain words, regardless of upstream fixes or quick-win rules. A plan that defers rotating a live key until after a refactor is wrong. Containment isn't the fix — the underlying finding still gets dispositioned normally.
+
+**Write for the person who will act on it.** Open the plan with a one-screen **"Do these today"** summary in plain language (at most 5 items) before the tables. If the repo looks like a first-time or AI-built app, give each work item a short prompt the user could paste into their AI tool (Lovable, Cursor, Claude Code) to make the fix, plus how to check it worked.
 
 **Degenerate cases:** zero findings → a two-line plan recording the clean result (still worth the ledger/follow-through reads). All-accept → the plan is the ledger; say so plainly.
 
 **→ Handoff:** the plan goes to implementation — item by item in the repo's session, or via a planning skill (superpowers writing-plans) for the bigger upstream projects. Future audits check this plan's ledger and Disputed sections before writing findings (see `_report-shape.md`).
 
 ---
-_v1.1, 2026-07-21 — v1 same day, hardened after a 3-critic adversarial review (defaults/trigger collision, accept-cluster blindness, dormant-catastrophe carve-out, ledger regrowth-muting, disputed exit, rung composition). Born from re-prompting the same two instructions after every audit: "decide what's worth doing" and "look for the fix one or two steps up." Part of Varnish Tools._
+_v1.2, 2026-10-02 — contain-first Phase 0, plain-language summary, paste-able fix prompts, footer. v1.1, 2026-07-21 — v1 same day, hardened after a 3-critic adversarial review (defaults/trigger collision, accept-cluster blindness, dormant-catastrophe carve-out, ledger regrowth-muting, disputed exit, rung composition). Born from re-prompting the same two instructions after every audit: "decide what's worth doing" and "look for the fix one or two steps up." Part of Varnish Tools._

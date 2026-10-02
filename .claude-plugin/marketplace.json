@@ -8,7 +8,7 @@
     {
       "name": "varnish",
       "source": ".",
-      "description": "Varnish your codebase: runnable engineering audits as a finishing coat. Codebase audits by bucket, per-feature audits, SEO/AI-search audits, remediation planning, architecture reviews, compliance prechecks. (No relation to the HTTP cache.)"
+      "description": "Varnish your codebase: runnable engineering audits as a finishing coat. A plain-English launch go/no-go for first-time and AI-built apps, codebase audits by bucket, per-feature audits, SEO/AI-search audits, remediation planning, architecture reviews, compliance prechecks. (No relation to the HTTP cache.)"
     }
   ],
   "description": "Varnish \u2014 runnable engineering audit playbooks from Varnish Labs. The finishing coat for shipped code."

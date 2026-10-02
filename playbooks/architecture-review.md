@@ -67,8 +67,8 @@ On Supabase/Postgres+RLS this is the highest-leverage, hardest-to-change part of
 
 ### A4. Query performance ceiling & the RLS multiplier
 - **Look for:** N+1 patterns baked into the design (a fan-out cron doing in-memory `for` loops over all users, list screens firing a query per row); FK and RLS-predicate columns with no index (Postgres does NOT auto-index FKs); RLS policies with bare `auth.uid()` re-evaluated per row turning a point lookup into a seq scan on every request; `select('*')` over wide rows; unbounded queries on tables that grow.
-- **Decide:** `EXPLAIN (ANALYZE, BUFFERS)` the hot queries; establish the **index strategy as a deliberate design**, not a missing-index patch; wrap `auth.uid()` as `(select auth.uid())` in policies; set the pagination convention. Record the index list + budgets as the baseline the routine audit diffs against.
-- **Tools:** `get_advisors`, `execute_sql` + `EXPLAIN ANALYZE`, `pg_stat_statements`; Sentry performance traces for the real slow endpoints.
+- **Decide:** `EXPLAIN` the hot queries (use `ANALYZE` only on a non-production copy — it executes the statement); establish the **index strategy as a deliberate design**, not a missing-index patch; wrap `auth.uid()` as `(select auth.uid())` in policies; set the pagination convention. Record the index list + budgets as the baseline the routine audit diffs against.
+- **Tools:** `get_advisors`, `execute_sql` + `EXPLAIN` (read-only; `ANALYZE` on a non-prod copy only), `pg_stat_statements`; Sentry performance traces for the real slow endpoints.
 
 ---
 

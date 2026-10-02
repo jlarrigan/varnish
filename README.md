@@ -15,17 +15,22 @@ That's it. `/varnish` is now available in every repo. _(No install? See [Other w
 
 ## Use
 
-Open Claude Code in the repo you want audited and pick a lane:
+Open Claude Code in the repo you want audited and pick a lane. **New to shipping, or built it with Lovable, Bolt, Cursor, or Replit? Start with `/varnish launch`.**
 
 | Command | What it does |
 |---|---|
-| `/varnish everything` | The full codebase audit, every bucket below in one sweep |
+| `/varnish launch` | **Start here.** "Is this safe to put in front of real users?" Plain-English go/no-go: open databases, keys the public can see, routes anyone can call, fakeable payments, AI endpoints billing you for strangers. Every finding comes with a fix prompt you can paste into your AI tool |
 | `/varnish security` | One bucket: `cleancode · architecture · security · reliability · scalability · delivery · accessibility · docs` |
 | `/varnish feature <name>` | Vertical audit of ONE feature, every dimension, graded A–D. Run it pre-merge |
 | `/varnish seo` | Marketing-site SEO + AI-search visibility (every finding carries an evidence tier) |
 | `/varnish plan` | **The second half:** turns your findings reports into a remediation plan |
 | `/varnish architecture-review` | The deep, run-rarely judgment: rebuild vs refactor |
 | `/varnish compliance` | Where you roughly stand vs SOC2 / ISO 27001 / PCI / HIPAA |
+| `/varnish everything` | The full codebase audit, every bucket in one sweep. Long and token-heavy; Claude confirms before starting |
+
+**Audits only look; they never change your code.** Every run is read-only except for writing its report to `audits/`: no edits, no commits, no installs, no deploys, read-only database queries, and Claude asks before touching any live account (Supabase, Vercel, Stripe…). Fixing happens afterwards, in a normal session, when you decide.
+
+**Built your app in Lovable, Bolt, or v0?** Connect it to GitHub, clone the repo to your computer, open Claude Code in that folder, and run `/varnish launch`. The report's fix prompts can be pasted straight back into your builder.
 
 ## What you get
 
@@ -61,6 +66,9 @@ Work order: 1. U1 (S)  2. F04 idempotency key (S)  3. U2 env schema (M) ...
 ```
 
 Accepted risks go in a ledger future audits **respect**: consciously declined findings stay declined instead of being re-argued every run.
+
+## Want a second set of eyes?
+Varnish is how I'd review your project if you asked me. If you're stuck on a finding, not sure the fix is right, or want me to look at the whole thing, reach me at [varnishlabs.io](https://varnishlabs.io). Every report ends with the same pointer.
 
 ## A typical session
 
@@ -117,6 +125,7 @@ Each playbook maps a **stage of building a product or running a tech org**: what
 - `playbooks/remediation-plan.md`: the **deciding** step every Audit hands off to. Takes one or more findings reports and returns a plan: every finding dispositioned (`fix / accept / defer` + `disputed`, accept is first-class), fix-clusters hunted for **upstream solutions** (the ladder: point fix → shared abstraction → structural change → guardrail that kills the class), effort assigned *to chosen solutions*, quick-wins-first work order, and a durable **Accepted-Risk Ledger** future audits respect. Born from re-prompting the same two instructions after every audit (2026-07-21).
 
 **Reviews** (own shape each):
+- `playbooks/launch-review.md`: the **pre-launch go/no-go** for people shipping their first app, often built with AI. Twelve checks drawn from what actually sinks new apps (open databases, public secret keys, routes anyone can call, fakeable payments, AI endpoints billing you, no backups, fake packages), written in plain English with a paste-able fix prompt per finding, a required "couldn't check" list, and a 🛑 HOLD / 🟡 FIX THEN SHIP / 🟢 SHIP verdict.
 - `playbooks/architecture-review.md`: the **deep, run-rarely** design judgment: "is this the right system, built right, and should we rebuild any of it before we keep paying to extend it?" Ends in a rebuild-vs-refactor ledger. Run rarely (new system, inherited codebase, post-rewrite).
 - `playbooks/compliance-review.md`: a **technical compliance precheck**: per technical control, where you roughly stand across **SOC2 / ISO 27001 / PCI DSS / HIPAA** at once (backbone = CIS Controls v8). A gut-check to get *ahead* of an audit; explicitly **not** an attestation, repo-observable controls only.
 
@@ -128,7 +137,7 @@ They cover overlapping *topics* (architecture, reliability, …) but ask differe
 | | **codebase-audit** (routine) | **architecture-review** |
 |---|---|---|
 | Question | "Did *this ship* drift? Still clean / following the rules?" | "Is the *design* right? Rebuild vs refactor?" |
-| Scope | diff-scoped (what changed) | whole-system |
+| Scope | diff-scoped (what changed), whole repo when there's no usable diff | whole-system |
 | Cadence | often (after ships, on a cadence) | rarely |
 | Output | a findings report | a judgment / rebuild-vs-refactor ledger |
 | Assumes | the architecture is roughly right | nothing; it questions the architecture |
@@ -144,7 +153,7 @@ This dissolves the "one doc vs two docs" question: the **passes are the data**, 
 
 **Audit types to route by:** the buckets are **inline in `codebase-audit.md`**: a bucket table at the top, and a `> Buckets:` tag on every pass (`cleancode`, `architecture`, `security`, `reliability`, `scalability`, `delivery`, `accessibility`, `docs`, plus `all`). A pass can belong to several buckets; the skill just runs the passes tagged with the requested one. **Wide coverage is intended**; a pass that doesn't apply gets marked N/A, not forced.
 
-**Beyond the Codebase Audit's buckets**, each other playbook routes to its own file: `feature` (`feature-audit.md`, all 8 dimensions *vertically* on one feature's slice), `seo` (`seo-audit.md`, the marketing-site visibility audit), and the two Reviews `architecture` (`architecture-review.md`) and `compliance` (`compliance-review.md`). So the skill's full type set is: the Codebase Audit buckets · `feature` · `seo` · `plan` (`remediation-plan.md`, the loop's second half) · `architecture` · `compliance`.
+**Beyond the Codebase Audit's buckets**, each other playbook routes to its own file: `feature` (`feature-audit.md`, all 8 dimensions *vertically* on one feature's slice), `seo` (`seo-audit.md`, the marketing-site visibility audit), and the Reviews `launch` (`launch-review.md`), `architecture-review` (`architecture-review.md`), and `compliance` (`compliance-review.md`). So the skill's full type set is: `launch` · the Codebase Audit buckets · `feature` · `seo` · `plan` (`remediation-plan.md`, the loop's second half) · `architecture-review` · `compliance`.
 
 **Convention for new passes:** add the pass to `codebase-audit.md` with a `> **Buckets:**` tag line. That tag *is* the routing; there's no separate table to keep in sync.
 
@@ -163,6 +172,6 @@ Don't stop at "run the audit." Each audit **writes its findings to a structured 
 ## Conventions (rough; will evolve)
 - One playbook per stage/process.
 - Each is built to be **skimmable by a human and executable by an agent**: when to run it, the goal/mindset, then concrete passes/checklists with real tooling.
-- This is a **living, intentionally-messy draft.** Structure gets cleaned up later; right now the only goal is getting the knowledge out of my head and onto the page.
+- **Versioned.** See `CHANGELOG.md`. Update with `/plugin marketplace update varnish`.
 
 _Started 2026-06-24._
