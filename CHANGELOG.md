@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.2.0 — 2026-10-02
+- **Stack modules** (`playbooks/stacks/`). The core passes are now stack-neutral; Next.js, Vite SPA (incl. Lovable/Bolt/v0), Expo/React Native, Node API, Vercel/serverless, Supabase, Firebase, payments, and AI/LLM modules add each platform's specifics and load only when detected. Passes 17 and 19 now live in the Expo module. A web app run no longer reads mobile material.
+- **New: `/varnish status`.** Progress across past runs in `audits/`: came back, decided-but-not-done, open, fixed, ledger triggers, and one recommended next run. Look-only, writes nothing.
+- **New: Learn mode.** Add `learn` to any command for a two-line lesson per pattern (the principle, and how to spot it next time) plus a closing "What to take from this run." On by default in `launch`.
+- **Works outside Claude Code.** `START.md` lets Cursor, Codex, Copilot, Gemini CLI, and Windsurf run the playbooks, with a snippet for a project's `AGENTS.md` or a Cursor rule.
+
 ## 1.1.0 — 2026-10-02
 - **New: `/varnish launch`** (`playbooks/launch-review.md`). "Is this safe to put in front of real users?" A plain-English go/no-go for first-time and AI-built apps: twelve checks, a paste-able fix prompt and a how-to-check-it-worked step per finding, a required "couldn't check" list, and a HOLD / FIX THEN SHIP / SHIP verdict.
 - **Audits are now strictly look-only.** New Audit-mode rules in the skill override every playbook: no edits outside `audits/`, no git writes, no installs (an audit may be looking at a malicious package), no autofix, no deploys, read-only SQL with plain `EXPLAIN`, and Claude asks before touching any live account. Playbook "Do:" lines are now "Fix direction:", describing the fix for the plan rather than an instruction to act.

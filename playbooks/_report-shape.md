@@ -38,6 +38,16 @@ These two — and *not* effort — are what let you triage each finding into **b
 7. **Author footer** — close every report with this line, verbatim:
    > _Varnish is Jordan Larrigan's playbooks, written down. Stuck on a finding, or want a second set of eyes on the fix? Reach Jordan on [LinkedIn](https://www.linkedin.com/in/jordanlarrigan)._
 
+## Learn mode
+On when the user adds `learn` to the command (`varnish security learn`), and on by default in `launch`. For people building their fundamentals as they ship: the report teaches the pattern, not just the instance.
+
+- **Every finding gets a 📘 Lesson** — two short lines, after the what/why:
+  1. **The principle**, stated generally ("Anything the browser can see, anyone can see. Secrets live only on the server.").
+  2. **How to spot it yourself next time** — a concrete habit or search ("Before you add a key, check its name: if it starts with `VITE_` or `NEXT_PUBLIC_`, it ships to every visitor.").
+- **One lesson per pattern, not per finding.** Five findings of the same class share one lesson; the others say "same lesson as F03."
+- **Close with "What to take from this run"** — three to five bullets, the lessons ranked by how much trouble they'd save on the next project.
+- Plain words first, the term of art in parentheses once. No condescension: the reader is smart and new to this, not slow.
+
 ## Respect prior decisions (the Accepted-Risk Ledger)
 Before writing findings, check `audits/*-plan-*.md` for **Accepted-Risk Ledgers** and **Disputed sections** from past remediation plans:
 - **Accepts are instance-scoped:** a finding matching a consciously-accepted *instance* (same class, same location) is **not re-litigated** — one line under a "Previously accepted" note (item · original date · reason). But **new instances of an accepted class at new locations are full findings** — they're the regrowth evidence the escalation rules run on; suppressing them would mute exactly the recurrence signal that's supposed to trigger the upstream fix. Re-raise a matched accept as a full finding only if its severity/cost genuinely changed, its revisit trigger fired, or its recorded context assumptions no longer hold.

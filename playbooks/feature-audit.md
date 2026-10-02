@@ -43,6 +43,8 @@ Before grading anything, establish **what the feature actually is** as a set of 
 - **Also note the feature's *consumers*** — what already imports or calls into this slice. The seam test ("could you rip it out") and the whole "before it's load-bearing" framing turn on who depends on it; you can't assess removability without knowing.
 
 ## The dimensions (the scorecard)
+**Stack modules:** detect the stack and load the matching `stacks/*.md` modules (signals in `stacks/_index.md`); their sections keyed to the codebase-audit passes apply to the matching dimensions here.
+
 Grade each **A–D** (rubric + mechanical grading rule below). For each, the agent looks for the items **within the slice only**, cites `file:line`, and proposes a `→` fix. Examples are grounded in the product-app stack (Supabase/RLS, Hono API, RN/OTA, RevenueCat) — treat them as *principles* and apply them to THIS repo's stack. **If a named tool isn't installed here, fall back to static inspection / grep and mark the finding _unverified-by-tool_ (lower confidence) rather than skipping the check.**
 
 **On reuse, stated plainly:** dimensions **2–5 and 8** check the same failure *classes* the Codebase Audit's scalability/security/reliability/delivery/a11y buckets do — the difference is they run **vertically on one feature's slice**, so they catch *this* feature's specific hole that a thin horizontal sweep misses. Dimensions **1 (the seam test), 6 (Fit), and 7 (Completeness)** are **feature-native** — they only exist at feature scope.

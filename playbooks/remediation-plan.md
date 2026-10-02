@@ -13,7 +13,7 @@ Claude will: **load the report(s) + project context + prior plans** (Step 0) →
 
 **This playbook decides; it does not fix.** No code changes. It also does not re-verify findings — that was the audit's job. If a finding looks wrong, mark it `disputed` (it has an exit route — see Pass 1) and move on.
 
-**Multi-report hygiene:** consume only Audit reports (the `_report-shape.md` contract). Exclude prior `*-plan-*` files (those are inputs to Step 0, not findings) and Review deliverables. The same finding appearing in two reports is **one disposition row noting both sources** — that repetition is Pass-2 regrowth signal, not a duplicate.
+**Multi-report hygiene:** consume only Audit reports (the `_report-shape.md` contract). Exclude prior `*-plan-*` files (those are inputs to Step 0, not findings), `*-status-*` snapshots, and Review deliverables. `launch` reports are consumed like Audit reports. The same finding appearing in two reports is **one disposition row noting both sources** — that repetition is Pass-2 regrowth signal, not a duplicate.
 
 ## When to run it
 - **Right after an audit lands** — the default second half of every audit run.
@@ -97,6 +97,8 @@ An upstream fix enters the work order if it collapses **any** `fix`-verdict find
 10. **Author footer** — the same closing line every Audit report carries (see `_report-shape.md`).
 
 **Contain first.** If any input report has a 🚨 Contain-today section, those items go **above the work order as Phase 0, today**, in plain words, regardless of upstream fixes or quick-win rules. A plan that defers rotating a live key until after a refactor is wrong. Containment isn't the fix — the underlying finding still gets dispositioned normally.
+
+**Learn mode** (if the user added `learn`, or the input report was in Learn mode): end the plan with "What to take from this" — three to five lessons, each tied to the fixes that teach it. Format per `_report-shape.md`.
 
 **Write for the person who will act on it.** Open the plan with a one-screen **"Do these today"** summary in plain language (at most 5 items) before the tables. If the repo looks like a first-time or AI-built app, give each work item a short prompt the user could paste into their AI tool (Lovable, Cursor, Claude Code) to make the fix, plus how to check it worked.
 

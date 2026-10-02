@@ -5,21 +5,21 @@ _The cleanup-and-hardening pass you run after shipping a big feature — or a pi
 ## ▶️ How to run this (read me first)
 **In the target repo's own Claude session, say:** _"Read this file and run the `cleancode` audit on this repo."_ (Swap in any bucket below, or `all`.)
 
-Claude will: take the passes tagged with that bucket → record the baseline (what builds, what's tested) → run them **look-only** (find, don't fix; see the Audit-mode rules in `skills/varnish/SKILL.md`) → **adversarially verify every finding** (a fresh skeptic greps the repo to confirm each claim and right-size severity) → write the *verified* findings to `audits/<YYYY-MM-DD>-<bucket>-<HHMM>.md` → stop and show you the report. You then run `remediation-plan.md` on the report to decide solutions, and fix in chunks. _(Run it in the target repo's own session — the fixing happens there.)_
+Claude will: take the passes tagged with that bucket → detect the stack and load its modules → record the baseline (what builds, what's tested) → run them **look-only** (find, don't fix; see the Audit-mode rules in `skills/varnish/SKILL.md`) → **adversarially verify every finding** (a fresh skeptic greps the repo to confirm each claim and right-size severity) → write the *verified* findings to `audits/<YYYY-MM-DD>-<bucket>-<HHMM>.md` → stop and show you the report. You then run `remediation-plan.md` on the report to decide solutions, and fix in chunks. _(Run it in the target repo's own session — the fixing happens there.)_
 
-**Buckets** — every pass below carries a `> Buckets:` tag; a bucket just runs the passes tagged with it. Pass 0 + the Finish step always run.
+**Buckets** — every pass below carries a `> Buckets:` tag; a bucket just runs the passes tagged with it. Pass 0 + the Finish step always run. The Passes column is a shortcut so you can read just those sections; the tags are the source of truth.
 
-| Bucket | What it checks |
-|---|---|
-| `cleancode` | **hygiene only** — lint, dead code, unused deps, DRY, type-hygiene, naming/clarity, test-hygiene, comment-truth, magic-numbers _(the biggest line-count wins live here)_ |
-| `architecture` | layering, separation of concerns, contracts, idempotency, boundaries, testability/coverage |
-| `security` | who can call what, secrets in code and in the browser, database rules (RLS), rate limits and AI spend, webhooks, PII/privacy, dependency vulns and fake packages |
-| `reliability` | errors, observability, SLO/health, alerting, durability, blast radius _(SRE)_ |
-| `scalability` | perf, cost, N+1s, caching, cold-starts |
-| `delivery` | deploy/rollback, migrations, OTA, CI, flags, env |
-| `accessibility` | a11y regressions |
-| `docs` | docs / agent-instruction currency |
-| `all` | every pass |
+| Bucket | What it checks | Passes |
+|---|---|---|
+| `cleancode` | **hygiene only** — lint, dead code, unused deps, DRY, type-hygiene, naming/clarity, test-hygiene, comment-truth, magic-numbers _(the biggest line-count wins live here)_ | 1, 2, 3, 4, 6, 9, 11, 30, 31 |
+| `architecture` | layering, separation of concerns, contracts, idempotency, boundaries, testability/coverage | 5, 7, 15 |
+| `security` | who can call what, secrets in code and in the browser, database rules (RLS), rate limits and AI spend, webhooks, PII/privacy, dependency vulns and fake packages | 3, 10, 15, 20, 28 |
+| `reliability` | errors, observability, SLO/health, alerting, durability, blast radius _(SRE)_ | 8, 12, 13, 14, 15, 24, 25, 26 |
+| `scalability` | perf, cost, N+1s, caching, cold-starts | 16, 23 |
+| `delivery` | deploy/rollback, migrations, OTA, CI, flags, env | 3, 16, 17, 18, 19, 20, 21, 22 |
+| `accessibility` | a11y regressions | 27 |
+| `docs` | docs / agent-instruction currency | 29 |
+| `all` | every pass | 0–31 |
 | `compliance` | _(different mode)_ run the technical compliance precheck → see `compliance-review.md`. Reuses the security/reliability/delivery checks, maps them to CIS v8 → SOC2/ISO/PCI/HIPAA, and renders a crosswalk matrix instead of a fix-list. |
 | `seo` | _(different target)_ the **marketing-site visibility** audit → see `seo-audit.md`. Classic SEO + GEO (AI-answer citation readiness) with evidence-tiered findings and a cargo-cult ledger. Run it on the site, not the app repo. |
 
@@ -29,14 +29,16 @@ For the deep "is this built right / rebuild vs refactor?" audit, use `architectu
 
 **Fix lines are direction, not actions.** Each pass's `Fix direction:` line describes what the eventual fix looks like, so the report can point the right way. Nothing gets changed during the audit — the fixing happens after `remediation-plan.md`, in a normal session.
 
-**Two ground rules:** the examples below are grounded in one real production stack (React Native app · serverless API · Postgres) — treat them as *principles* and apply them to THIS repo's stack. If a pass doesn't apply, mark it **N/A** in the report (don't force a finding) — wide coverage is the point.
+**Stack modules.** The passes are written stack-neutral. Detect the stack and load the matching `stacks/*.md` modules (signals in `stacks/_index.md`); each adds the exact files, settings, and traps for its platform, keyed by pass number. Passes 17 and 19 exist only inside the modules that define them.
+
+**Ground rule:** if a pass doesn't apply, mark it **N/A** in the report (don't force a finding) — wide coverage is the point.
 
 ## Findings are adversarially verified (built in, not optional)
 Don't trust a raw finding. After the find phase, **every finding is re-checked by a separate verifier whose job is to *disprove* it.** Concretely:
 1. Spawn a **fresh subagent** (not the context that found them). Give it only the findings list — ID, claim, `file:line` — not the finder's reasoning.
 2. For each finding it returns `confirmed`, `adjusted` (severity or claim corrected), or `dropped`, **with the evidence**: the quoted line or the command output that settles it.
 3. Drop what doesn't survive; apply the adjustments.
-4. The report header states the tally: **"N raw → M kept (K dropped, J adjusted)."** No tally means it wasn't verified — don't write "adversarially verified" without one.
+4. The report header states the tally: **"N raw → M kept (K dropped, J adjusted, A added by the verifier)."** No tally means it wasn't verified — don't write "adversarially verified" without one.
 
 If subagents aren't available, do the verification as a separate, explicit second pass and say so in the header. *A report of 30 verified findings is worth ten times a report of 50 plausible ones.*
 - `cleancode` → the verifier proves claims by grep/inspection ("is this export really unreferenced?").
@@ -50,7 +52,7 @@ Write the report in the shared **Audit shape** — see [`_report-shape.md`](./_r
 **On top of the shared shape, the Codebase Audit adds:**
 - **Header** carries the **bucket** + **playbook**.
 - **Pass 0 baseline metrics** — LOC, tests, typecheck, bundle size, captured up top. (Measurement, not a decision — it belongs.)
-- **Findings grouped by pass** — each pass marked `*Applicable.*` or `*N/A — why*`; each finding gets `[Severity · Cost-of-doing-nothing]` + `file:line` + what-and-why, plus a ✅ *Clean:* line for what passed.
+- **Findings grouped by area** (per `_report-shape.md`), each tagged with its pass; a short pass list up top marks each pass `Applicable` or `N/A — why`; each finding gets `[Severity · Cost-of-doing-nothing]` + `file:line` + what-and-why, plus a ✅ *Clean:* line for what passed.
 - **Finish** — on the audit run, nothing more than the report. Re-measuring deltas against Pass 0 happens after fixes land, in the fix phase.
 
 The two axes are the triage signal: **Severity** (how bad if it bites) × **Cost of doing nothing** (what leaving it costs) tells you backlog-vs-queue without guessing at a fix.
@@ -180,6 +182,7 @@ When you ship fast, you trade cleanliness for speed *on purpose*: duplication, d
 > **Buckets:** security
 - **Look for:** committed secrets (including a committed `.env` — anything ever committed counts as leaked, even if deleted later); authorization enforced only on the frontend (the classic trap — gate it server-side too); missing input validation; dependency vulns; over-broad data access (does your RLS / row-level policy *actually* restrict?).
 - **Who can call this?** List every API route, server action, and edge/cloud function and answer that question for each. Routes with no auth check at all; IDs taken from the URL or body with no ownership check (IDOR); Next.js Server Actions (they're public POST endpoints); auth enforced only in middleware; `getSession()` trusted on the server instead of a verified `getUser()`/`getClaims()`; JWTs decoded without verifying.
+- **Exposure counts as exploitable.** A secret behind a public prefix, in client code, or in git history is High even if no bundle ships it today — the key is already exposed or one refactor away from it.
 - **Secrets in the browser:** server-only keys behind a client-exposed prefix (`NEXT_PUBLIC_`, `VITE_`, `EXPO_PUBLIC_`, `REACT_APP_`, `PUBLIC_`), a Supabase `service_role` / `sb_secret_` key or a payments/AI provider secret imported into client code. Anything in a mobile app bundle is public too. If a build output exists, grep it for key patterns — that's the proof.
 - **Database rules (Supabase/Firebase):** tables in exposed schemas with RLS off; `USING (true)` policies; INSERT/UPDATE with no `WITH CHECK`; grants to `anon`; `SECURITY DEFINER` functions callable by `anon`; views that bypass RLS; public storage buckets; Firebase rules with `if true`.
 - **Abuse and the bill:** no rate limit on login, signup, password reset, OTP/SMS/email sends, or any route that calls a paid API (AI especially — an open AI endpoint is someone else's free API on your card). AI routes with no auth, no per-user cap, no `max_tokens`.
@@ -197,133 +200,127 @@ When you ship fast, you trade cleanliness for speed *on purpose*: duplication, d
 ---
 
 ## More passes — systems design, SRE, ops & data
-_These are **diff-scoped** when there's a base to diff against — they check what THIS batch of ships changed against the standard. With no usable base, apply them to the whole repo (see Scope, above). Grounded in a local-first mobile stack; translate to yours. Where a pass sharpens an earlier one (8 Error Handling, 10 Security) it says so._
+_These are **diff-scoped** when there's a base to diff against — they check what THIS batch of ships changed against the standard. With no usable base, apply them to the whole repo (see Scope, above). They're written stack-neutral; the **stack modules** you loaded (`stacks/*.md`) add the exact files, settings, tools, and traps for this repo's platforms, keyed by pass number. Where a pass sharpens an earlier one (8 Error Handling, 10 Security) it says so._
 
-### 12. Observability Completeness — *"every new route emits the four signals," not just "Sentry exists"*
+### 12. Observability Completeness — *"every new route emits the four signals," not just "an error tracker exists"*
 > **Buckets:** reliability
-- **What:** pass 8 only asks "is Sentry capturing." That bar is too low. The classic shape: Sentry wired in the mobile app but **not in the API at all**, and no global `app.onError` (only per-route handlers on a few routes), so an unhandled error on any other route returns the framework's default 500 with zero capture.
-- **Look for:** new Hono routes added this ship with no error capture path to Sentry; a missing global `app.onError` at the API entrypoint; `console.log` instead of structured JSON logs (Vercel function logs are the only backend trace you get); errors with no request context (route, `userId`/auth subject, request id); new crons whose success/failure isn't an emitted signal anyone can query — only a returned value nobody reads; mobile source maps not uploaded on the EAS/OTA build (minified stack traces). For 3-5 critical routes confirm the four golden signals are queryable: latency (function duration p95/p99 vs the 30s `maxDuration` ceiling), traffic (invocations), errors (rate), saturation (timeout/OOM rate).
-- **Fix direction:** treat "a new route with no telemetry" as a finding of the same severity as a swallowed error. Wire `@sentry/node` (or OTel) into the API and add a single global `app.onError(captureException + structured 500 envelope)`. Standardize a request-scoped JSON logger (route, requestId, userId). Confirm new crons emit a visible success/failure signal.
-- **Tools:** `@sentry/node` + `@sentry/nextjs` + `@sentry/react-native`; Vercel function logs / OTel; Sentry CLI for source-map upload; Hono `onError` + a logger middleware; `mcp__plugin_vercel_vercel__get_runtime_logs`.
+- **What:** pass 8 only asks "is the error tracker capturing." That bar is too low. The classic shape: error tracking wired into the client but **not the API at all**, and no global error handler (only per-route handlers on a few routes), so an unhandled error on any other route returns a default 500 with zero capture.
+- **Look for:** new routes with no error-capture path; no global error handler at the API entrypoint; `console.log` instead of structured logs; errors with no request context (route, user, request id); new scheduled jobs whose success/failure isn't an emitted signal anyone can query; client source maps not uploaded (minified stack traces). For 3–5 critical routes, confirm the four golden signals are queryable: latency (p95/p99 against the platform's timeout), traffic, errors, saturation (timeouts / out-of-memory).
+- **Fix direction:** treat "a new route with no telemetry" as seriously as a swallowed error. One global error handler that captures and returns a consistent error shape; a request-scoped structured logger; jobs that emit a visible success/failure.
+- **Tools:** the stack's error tracker (Sentry or similar) and its source-map upload; platform logs; OpenTelemetry.
 
 ### 13. SLO Attainment & Health-Check Honesty — *did we stay inside the budget, and does /health actually probe?*
 > **Buckets:** reliability
-- **What:** routine re-measurement against the SLOs the Architecture Review set. Also a standing check on the health endpoint, which is usually hollow: a `/health` returning a static `{ ok: true }` proves only that the function cold-starts — it reports green while the database is down, a service key is rotated, or a critical dependency is unreachable.
-- **Look for:** SLI attainment since last ship (e.g. the core write path's success+latency, the main read path, payment/entitlement resolution) and how much error budget burned; whether `/health` still returns a flat `{ok:true}` rather than per-dependency status; new env/keys this ship added that `/health` doesn't assert exist at boot.
-- **Fix direction:** report budget burned since last ship; if it's exhausted, flag "stop shipping features, harden" as a finding. Make `/health` a real dependency probe (cheap `SELECT 1` + assert required env/keys present) returning per-dependency status. (Defining the SLOs themselves and building the probe is the Architecture Review's job; this pass only re-measures and flags regression.)
-- **Tools:** Sentry releases/issue-rate or Vercel Analytics for SLI data; a small `checkHealth()` doing `SELECT 1` + env assertions; Zod to validate required env at boot; `mcp__plugin_supabase_supabase__query_logs` (with permission).
+- **What:** routine re-measurement against the SLOs the Architecture Review set (if any exist — if not, that's the finding). Also a standing check on the health endpoint, which is usually hollow: a `/health` returning a static `{ ok: true }` proves only that the process starts; it reports green while the database is down or a key is rotated.
+- **Look for:** SLI attainment since last ship (core write path success + latency, main read path, payment/entitlement resolution) and error budget burned; `/health` that doesn't probe its dependencies; new env vars/keys `/health` doesn't assert at boot.
+- **Fix direction:** if the budget is exhausted, flag "stop shipping features, harden." Make `/health` a real dependency probe (cheap DB round-trip + required config present) with per-dependency status. Defining SLOs is the Architecture Review's job.
+- **Tools:** error-tracker release health or platform analytics for SLI data; a `checkHealth()` with a DB ping + env assertions.
 
 ### 14. Alerting & On-Call Surface — *does anything page a human, and did this ship add a silent failure?*
 > **Buckets:** reliability
-- **What:** captured signal is worthless if nothing routes it to a person. The common shape: crons with no on-failure alert, and a static `/health` cron that can't alert because it never goes unhealthy.
-- **Look for:** new error paths with no alert rule; new or changed crons with no cron-failure notification; alert thresholds not tied to the SLOs (error-rate spike, p99 breach, function timeout/OOM, 5xx burst); new on-call surface (a route, cron, dependency, env var) with no owner; alert fatigue (alerts so noisy they're muted).
-- **Fix direction:** wire Sentry alert rules (new-issue, error-rate spike, regression) and Vercel cron-failure/deploy-failure notifications to a real channel (Slack, or email via a provider already in the stack). Set thresholds from SLOs, not arbitrary numbers. Every alert is actionable or deleted.
-- **Tools:** Sentry alert rules + metric alerts; Vercel cron/deployment notifications; Slack webhook or Resend; optionally Better Stack/Checkly external uptime monitor.
+- **What:** captured signal is worthless if nothing routes it to a person. Common shape: scheduled jobs with no on-failure alert, and a static health check that can't alert because it never goes unhealthy.
+- **Look for:** new error paths with no alert rule; new or changed jobs with no failure notification; thresholds not tied to SLOs (error-rate spike, p99 breach, timeouts, 5xx bursts); new on-call surface (route, job, dependency, env var) with no owner; alerts so noisy they're muted.
+- **Fix direction:** error-tracker alert rules and platform job/deploy-failure notifications to a real channel; thresholds from SLOs; every alert actionable or deleted.
+- **Tools:** error-tracker alerts; platform notifications; an external uptime monitor.
 
-### 15. Idempotency & Write-Safety on New Endpoints — *Vercel retries, mobile retries, RevenueCat WILL redeliver*
-> **Buckets:** architecture · reliability
-- **What:** sharpens pass 8's resilience, which only covers the CALLING side (timeouts/retries). This covers the RECEIVING side: is every new write safe to run twice? The classic tells: a payment-webhook handler that asserts idempotency in a **comment only** with no `ON CONFLICT`/upsert primitive backing it, and an API where a grep for `AbortController|retry|backoff|circuit` returns nothing while the function timeout is 30s.
-- **Look for (diff-scoped to new write/webhook endpoints):** POST/mutation handlers and webhook receivers with no dedupe key; webhooks not signature-verified or whose event id isn't recorded-once; multi-step writes (update the DB → call the payments provider → send push) with no transaction and no compensating action; read-modify-write races (incrementing a counter, flipping a flag) with no atomic SQL or version column; reliance on module-global mutable state to "remember" across requests (invalid on stateless serverless); external calls (DB client, email, push, payments) with no `AbortController` timeout, so a hung dependency burns the full 30s and the function is killed mid-write.
-- **Fix direction:** run each new write/webhook endpoint through a short checklist — has a dedupe key (natural or client-supplied `Idempotency-Key` persisted with a UNIQUE constraint; webhook event-id table with `INSERT … ON CONFLICT DO NOTHING`); is signature-verified; multi-step writes are wrapped in a Postgres transaction or single Supabase RPC; no module-global mutable state. Wrap every external call in an `AbortController` timeout well under `maxDuration` (5-8s) to fail fast. Add a test that double-delivery of the payment webhook is a no-op.
-- **Tools:** Postgres UNIQUE + `INSERT ON CONFLICT`; DB RPC/database functions; webhook signature verification + an events table; `AbortSignal.timeout`, `p-retry` (idempotent ops only); grep for module-level mutable singletons and for `catch` around the second step of a multi-write; `mcp__plugin_supabase_supabase__execute_sql`.
+### 15. Idempotency & Write-Safety on New Endpoints — *platforms retry, clients retry, payment providers WILL redeliver*
+> **Buckets:** architecture · reliability · security
+- **What:** sharpens pass 8, which covers the CALLING side (timeouts/retries). This is the RECEIVING side: is every new write safe to run twice? Classic tells: a payment webhook that claims idempotency in a **comment only** with no unique constraint or upsert behind it; no timeouts anywhere in an API whose platform kills functions mid-write.
+- **Look for (new write/webhook endpoints):** mutations and webhook receivers with no dedupe key; webhooks not signature-verified, or whose event id isn't recorded once; multi-step writes (update DB → call payments → send notification) with no transaction and no compensating action; read-modify-write races with no atomic update or version column; module-global mutable state used to "remember" across requests (invalid on serverless and multi-instance servers); external calls with no timeout.
+- **Fix direction:** each new write/webhook gets a dedupe key (a persisted `Idempotency-Key` or an event-id table with a unique constraint), signature verification, a transaction or single database function for multi-step writes, and a timeout well under the platform limit on every external call. A test that double delivery is a no-op.
+- **Tools:** unique constraints + upsert/`ON CONFLICT`; database functions; signature verification; `AbortSignal.timeout`; grep for module-level mutable singletons.
 
 ### 16. Migration Safety & Reversibility (this batch) — *forward-only SQL, no down-path, applied out-of-band*
 > **Buckets:** delivery · scalability
-- **What:** the highest-stakes operability check for a managed-Postgres stack. The dangerous default: forward-only numbered SQL with **no down-migrations** and **no migration step in CI** — schema reaches prod out-of-band via a dashboard or tool call, un-versioned-against-deploy and un-reversible. And where OTA-updated mobile apps mean weeks-old builds are live, a non-additive migration silently breaks in-flight old clients.
-- **Look for (only migrations added since the last release tag):** any `DROP`/`RENAME`/retype of a column; `NOT NULL` added without a default; a backfill in the same statement/transaction as a schema change (lock risk); anything that isn't strictly expand-then-contract; whether the migration was applied in the correct order relative to the code deploy that reads the new shape; whether anyone can state "how do we undo migration N." Re-run Supabase advisors so schema security/perf regressions surface every ship.
-- **Fix direction:** flag any non-additive migration as a release blocker until split expand → backfill → contract across ≥2 deploys. Require a stated reversal note per migration (even "forward-fix only, here's the compensating migration"). Confirm migration applied before the code that depends on it.
-- **Tools:** `squawk` (Postgres migration linter for lock/destructive ops); Supabase CLI shadow-DB diff; `mcp__plugin_supabase_supabase__get_advisors`, `list_migrations`, `execute_sql` (inspect `pg_constraint`); a migration-lint CI step for `DROP`/`ALTER…TYPE`.
+- **What:** the highest-stakes operability check on any relational database. The dangerous default: forward-only SQL with **no down-migrations** and **no migration step in CI**, so schema reaches prod out-of-band, unversioned against the deploy and unreversible. Where old clients stay live (mobile apps, cached SPAs), a non-additive migration silently breaks them.
+- **Look for (migrations added since the base):** any `DROP`/`RENAME`/retype; `NOT NULL` added without a default; a backfill in the same transaction as a schema change (lock risk); anything that isn't expand-then-contract; whether the migration ran before the code that reads the new shape; whether anyone can state "how do we undo migration N."
+- **Fix direction:** any non-additive migration is a release blocker until split expand → backfill → contract across ≥2 deploys; a reversal note per migration; migration applied before dependent code.
+- **Tools:** `squawk` (Postgres migration linter); the platform's migration CLI and diff tooling; read-only catalog queries.
 
-### 17. Local-First Device-Migration Safety — *the on-device SQLite replica is a SECOND schema you now have to migrate*
+### 17. Local-First Device-Migration Safety
 > **Buckets:** delivery
-- **What:** for local-first apps only. If the repo has sync rules governing the SERVER side (additive-only synced tables, frozen API contracts, tombstones, LWW) — don't re-audit those. This pass covers the DEVICE side such rules usually miss: the on-device SQLite replica + offline outbox + conflict policy.
-- **Look for (any ship touching synced tables or shared compute contracts):** an OTA JS update that assumes a SQLite column the installed on-device DB doesn't have; un-synced outbox writes that could be lost when a user updates across a schema change; tombstone/`deleted_at` filtering missing on the client side; no on-device `schema_version` and no forward migration runner; no server-driven "force full re-sync / wipe-and-rehydrate" escape hatch for a corrupted local DB. The eventual cutover from server-authoritative reads to local reads is a data-migration event for every user, not a code change.
-- **Fix direction:** for any synced-data change, verify the on-device migration exists and is idempotent, the outbox survives the upgrade (drain-before-upgrade), tombstones are filtered client-side too, and there's a tested force-resync path. Pair with pass 19 — a replica-schema change may require a native build + runtimeVersion bump, not an OTA.
-- **Tools:** `expo-sqlite` migration runner / Drizzle or Kysely on-device migrations; a `schema_version` row in the local DB; integration test simulating upgrade-across-schema with a non-empty outbox; a server-side `force_resync` config flag.
+- **Runs only when a stack module defines it** (today: `stacks/expo-react-native.md`, for apps with an on-device database replica). Otherwise N/A — "no on-device replica."
 
 ### 18. Deploy & Rollback Verification — *is prod actually serving the commit we shipped?*
 > **Buckets:** delivery
-- **What:** git-driven auto-promotion has a **real, documented failure shape**: two branches merge within seconds, the platform's build dedup skips the prod build, and prod stays pinned to the previous build while everyone believes the ship landed.
-- **Look for:** confirmation that the prod deployment SHA == the audited commit, across all three independent surfaces — Vercel (web+api), Supabase migrations (no rollback at all), and EAS/OTA (rollback = republish previous update, NOT a git revert); whether the previous-good build/OTA is identified and one action away; whether any migration this batch made the code irreversible (you can't roll back code that depends on a now-applied non-reversible migration — which is why pass 16 matters).
-- **Fix direction:** check (read-only, with permission) that prod serves the audited commit on web, api, and the OTA channel; confirm the prior-good build/OTA is one action away on each surface; confirm no migration this batch blocked code rollback. Report what you find; never promote or roll back during an audit.
-- **Tools (read-only):** `vercel ls` / `mcp__plugin_vercel_vercel__list_deployments`, `get_deployment`; EAS update history; the `/api/health` endpoint; a SHA comparison. (Promote/rollback commands belong to the fix phase.)
+- **What:** git-driven auto-deploys have a documented failure shape: two merges land seconds apart, the platform dedupes the build, and prod stays on the previous build while everyone believes the ship landed.
+- **Look for:** whether prod's deployed commit matches the audited commit on every independent surface (web, API, database migrations, mobile updates); whether the previous-good build is identified and one action away; whether any migration this batch made code rollback impossible (see pass 16).
+- **Fix direction:** check (read-only, with permission) that each surface serves the audited commit and that rollback is one action away. Report it; never promote or roll back during an audit.
+- **Tools (read-only):** the platform's deployment list / CLI; the health endpoint; a SHA comparison.
 
-### 19. OTA / runtimeVersion Governance — *did a JS-only OTA assume native code old binaries don't have?*
+### 19. Client Update Governance — *can an update reach clients that can't run it?*
 > **Buckets:** delivery
-- **What:** the dangerous default: `runtimeVersion` pinned as a hardcoded literal (not a fingerprint/appVersion policy that auto-bumps on native change), and an `updates` block with no `fallbackToCacheTimeout`/`checkAutomatically`. The risk: an OTA JS update referencing a new native module — or a new on-device-replica expectation — pushed under the same runtimeVersion to clients that can't satisfy it → crash-on-launch with no native fallback. Even where a force-update gate exists (an API route serving a minimum-supported version from config), often nothing ties runtimeVersion, OTA channel, and that gate together.
-- **Look for (this ship):** any native-module or on-device-schema change that went out as an OTA instead of a new build + runtimeVersion bump; OTA pushed to the wrong channel (`development`/`preview`/`production`); the minimum-supported gate not raised when old clients must be forced off; no tested OTA rollback (republish prior update) for the production channel.
-- **Fix direction:** confirm native/replica-shape changes got a runtimeVersion bump and a store build, not an OTA; confirm correct channel; raise the minimum-supported gate if needed.
-- **Tools:** EAS Update (channels, `eas update --rollback`); Expo runtimeVersion fingerprint policy; `expo-updates` config; a config-driven mobile-version gate.
+- **Runs only when a stack module defines it** (today: `stacks/expo-react-native.md`, for over-the-air updates against native binaries). Otherwise N/A — "no OTA updates."
 
 ### 20. Environment & Secrets Drift — *did a new var land in code without parity / .env.example?*
 > **Buckets:** security · delivery
-- **What:** even where secrets are correctly gitignored and live in platform env vars, the common gap is **no runtime env-schema validation**, so a missing/renamed prod var fails at request time, not at boot. And `.env.example` drifts: it ends up listing a fraction of the vars the code actually references.
-- **Look for (diff-scoped):** any `process.env` var added in code this batch with no corresponding `.env.example` entry; a server-only secret slipped behind a client-exposed prefix (`NEXT_PUBLIC_`, `VITE_`, `EXPO_PUBLIC_`, `REACT_APP_`); a secret logged to Sentry; parity gaps between preview/prod env sets across platforms.
-- **Fix direction:** diff `.env.example` against env vars actually referenced in code and against the platform env sets; flag every new var missing from `.env.example`. (Introducing the single typed Zod env schema parsed at boot is the Architecture Review's job; this pass enforces the contract per ship.)
-- **Tools:** Zod env schema (`env.ts` parsed at startup); `mcp__plugin_vercel_vercel__list_projects` / `vercel:env` skill / `vercel env ls`; `eas env`; a grep of `process.env` references vs `.env.example`; secret scanner in CI.
+- **What:** even with secrets in platform env vars, the common gap is **no runtime env validation**, so a missing or renamed prod var fails at request time, not boot. And `.env.example` drifts until it lists a fraction of what the code reads.
+- **Look for:** env vars read in code with no `.env.example` entry; a server-only secret behind a client-exposed prefix (the stack module lists the prefixes); a secret logged to the error tracker; preview/prod env parity gaps.
+- **Fix direction:** diff `.env.example` against env vars referenced in code and the platform env sets; flag every gap. (A typed env schema parsed at boot is the Architecture Review's job; this pass enforces the contract per ship.)
+- **Tools:** an env schema (`zod` or similar) parsed at startup; the platform's env listing (read-only, with permission); grep of env references vs `.env.example`; a secret scanner in CI.
 
 ### 21. Feature-Flag Lifecycle — *every new flag gets a type and an expiry, not just a dead-flag sweep*
 > **Buckets:** delivery
-- **What:** sharpens pass 2, which finds stale flags only AFTER they rot. Where flags live as rows in a config table and toggle via SQL with no redeploy, a flag can be "on" in prod with its code branch already deleted, or vice versa — and nothing reconciles config rows against the code that reads them.
-- **Look for:** flag keys read in code with no matching config row (and the inverse — DB rows no code reads); flags added this batch with no owner, type (release / experiment / ops-gate / kill-switch), or expiry; release/experiment flags past their removal date.
-- **Fix direction:** require every new flag to carry an owner + type + expiry (or "permanent" marker); reconcile code ↔ config; sweep expired release flags and collapse their branches (this feeds pass 2 rather than duplicating it).
-- **Tools:** a reconciliation script (grep flag keys in code vs a `SELECT key FROM` the config table); a checked-in flag registry/manifest; `mcp__plugin_supabase_supabase__execute_sql`.
+- **What:** sharpens pass 2, which finds stale flags only after they rot. Where flags live in a config table or flag service, a flag can be "on" in prod with its code deleted, or vice versa, and nothing reconciles them.
+- **Look for:** flag keys in code with no config entry (and the inverse); new flags with no owner, type (release / experiment / ops / kill-switch), or expiry; flags past their removal date.
+- **Fix direction:** owner + type + expiry on every flag; reconcile code ↔ config; sweep expired flags into pass 2.
+- **Tools:** a reconciliation grep against the flag store (read-only); a checked-in flag registry.
 
 ### 22. CI-as-Gate Drift — *are the audit's own tools actually blocking merge?*
 > **Buckets:** delivery
-- **What:** this playbook has you RUN dead-code, supply-chain, and secret scans during the audit — but the common state is a CI that only does typecheck, tests, and a build, with those tools living as local scripts that never block a PR. Every gain this audit makes can silently erode next ship because nothing fails the PR.
-- **Look for:** which audit checks block merge vs. honor-system; any check added then disabled, `continue-on-error` crept in, or a workspace escaping the test/typecheck matrix this ship; whether `--frozen-lockfile` is the only lockfile/supply-chain guard.
-- **Fix direction:** confirm this audit's findings are now enforced in CI so they can't come back; flag any silently-disabled check. (Deciding the full required-gate set is the Architecture Review's job; this pass guards against regression.)
-- **Tools:** GitHub Actions required-checks/branch protection; `gitleaks`/`trufflehog`; `pnpm audit --audit-level=high` / Socket.dev / Snyk; promote `knip` to a CI job; a `squawk` migration-lint step.
+- **What:** this playbook runs dead-code, supply-chain, and secret scans — but the common state is CI that only typechecks, tests, and builds, so every gain can silently erode next ship. **No CI at all is the finding**, not N/A.
+- **Look for:** which checks block merge vs. honor-system; checks added then disabled, `continue-on-error` creeping in, packages escaping the test matrix; a frozen lockfile as the only supply-chain guard.
+- **Fix direction:** enforce this audit's findings in CI so they can't come back; flag silently disabled checks.
+- **Tools:** required status checks / branch protection; `gitleaks`/`trufflehog`; dependency audit at high severity; Socket.dev; `knip` as a CI job; a migration-lint step.
 
 ### 23. Performance & Cost Regression — *N+1s, missing indexes, cold-starts, and the bill*
 > **Buckets:** scalability
-- **What:** bundle size is easy to measure; runtime data cost is what actually bills you. This is diff-scoped: did THIS ship regress against the perf budgets and index baseline the Architecture Review recorded?
-- **Look for:** new N+1 patterns (a `.map()` firing one query per row — common in fan-out crons and list screens); queries filtering/joining on unindexed columns, especially new FK columns (Postgres does NOT auto-index FKs) and any column in an RLS `USING` clause; RLS policies with bare `auth.uid()` re-evaluated per row instead of `(select auth.uid())`; `select('*')` over-fetching wide rows; unbounded list queries with no `LIMIT`/pagination on growing tables; new top-level imports / eager client construction in Hono routes inflating cold-start; O(users) cron work in one invocation against the timeout ceiling (an in-memory `for` loop over all users with their settings and recent rows is a time bomb as the table grows); new or more-frequent crons, raised `maxDuration`, or a new noisy Sentry error path driving cost.
-- **Fix direction:** `EXPLAIN` the hot queries this ship touched (plain `EXPLAIN` during the audit — `ANALYZE` executes the query; save it for a non-production database in the fix phase); add indexes on new FKs and RLS-predicate columns; wrap `auth.uid()` as `(select auth.uid())` in policies; collapse N+1 into one query/RPC; add pagination; snapshot the cost-driving deltas (cron frequency, maxDuration, fan-out queries, Sentry volume) next to the existing before/after metrics and right-size anything that grew without justification.
-- **Tools:** `mcp__plugin_supabase_supabase__get_advisors` (flags unindexed FKs + RLS perf directly), `execute_sql` with plain `EXPLAIN` (read-only, with permission), `pg_stat_statements`; the `supabase:supabase-postgres-best-practices` skill; `mcp__plugin_vercel_vercel__get_runtime_logs` for cold-start/duration; `@next/bundle-analyzer` / `expo-atlas`; Sentry performance traces.
+- **What:** bundle size is easy to measure; runtime data cost is what actually bills you. Did THIS ship regress against the perf budgets and index baseline?
+- **Look for:** N+1 patterns (one query per row in lists and jobs); filters/joins on unindexed columns, especially new foreign keys (Postgres doesn't auto-index them) and columns used in access-policy predicates; `select *` over-fetching; unbounded queries with no limit/pagination; heavy top-level imports inflating cold starts; jobs that loop over every user in one invocation against the timeout; new or more frequent jobs, raised timeouts, noisy error paths, or new paid-API calls driving cost.
+- **Fix direction:** `EXPLAIN` the hot queries (plain `EXPLAIN` during the audit — `ANALYZE` executes the query; use it on a non-production database in the fix phase); index new FKs and policy columns; collapse N+1s; paginate; snapshot the cost drivers.
+- **Tools:** the database's advisor/stats views (read-only, with permission); `pg_stat_statements`; platform duration logs; a bundle analyzer; tracing.
 
 ### 24. Data Durability & Migration Backout (this batch) — *can we get the data back if this migration was wrong?*
 > **Buckets:** reliability
-- **What:** the security pass covers RLS access but never asks "can we recover the data." Postgres holds all user state; a bad migration is a data-loss event, not a code bug.
-- **Look for (this batch):** destructive DDL (`DROP`, type narrowing, in-place backfills) shipped with no verified recovery path or backout note; whether Supabase PITR/backups are even enabled on the project tier; secrets/keys (service-role, push, payments) touched this ship with no documented rotation procedure.
-- **Fix direction:** review each migration in the ship for reversibility and a backout note; flag any unguarded destructive DDL as a release blocker. (Confirming backups, setting RPO/RTO, and running a restore drill is the Architecture Review's job; this pass guards the per-ship diff.)
-- **Tools:** Supabase backups/PITR + branch-restore; `mcp__plugin_supabase_supabase__list_migrations`; expand-contract pattern; migration-lint for `DROP`/`ALTER…TYPE`.
+- **What:** the security pass covers access but never asks "can we recover the data." A bad migration is a data-loss event, not a code bug.
+- **Look for:** destructive DDL shipped with no recovery path or backout note; whether backups / point-in-time recovery are even enabled (usually Couldn't-check from the repo — list it); dev and prod sharing one database; seed/reset scripts or agent tools that can reach prod; secrets touched this ship with no rotation procedure.
+- **Fix direction:** reversibility and a backout note per migration; unguarded destructive DDL is a release blocker; separate dev and prod. (Setting RPO/RTO and running a restore drill is the Architecture Review's job.)
+- **Tools:** the platform's backup/restore settings (read-only, with permission); migration history; migration lint.
 
 ### 25. Runbook & On-Call-Surface Currency — *did this ship add a failure mode with no runbook?*
 > **Buckets:** reliability
-- **What:** the audit produces a cleanup report but no operational docs. When something breaks at 2am, what does the responder read?
-- **Look for:** new failure surface this ship introduced (a new cron, dependency, env var, webhook) with no runbook entry or rollback note; missing runbooks for the obvious incidents ("push stopped", "entitlements wrong", "DB unreachable", "auth failing", "cron didn't run"); no documented deploy rollback or OTA emergency-republish path.
-- **Fix direction:** for each new on-call surface, add a thin runbook entry (symptom, where to look — specific Sentry/Vercel/Supabase view, likely cause, fix/mitigation incl. rollback command). A new on-call surface with no runbook is a finding.
-- **Tools:** Markdown runbooks in the repo alongside this playbook; Vercel instant rollback + EAS channels/rollback; Sentry saved searches + Supabase log queries linked from each runbook.
+- **What:** when something breaks at 2am, what does the responder read?
+- **Look for:** new failure surface (job, dependency, env var, webhook) with no runbook entry; missing runbooks for the obvious incidents ("payments wrong", "DB unreachable", "auth failing", "job didn't run", "a key leaked"); no documented rollback path.
+- **Fix direction:** a thin runbook per new surface — symptom, where to look, likely cause, mitigation including rollback.
+- **Tools:** markdown runbooks in the repo, linked to the exact log/error views.
 
 ### 26. Failure-Mode & Blast-Radius Drift — *did a new dependency join the critical path without a degrade decision?*
 > **Buckets:** reliability
-- **What:** pass 8 mentions "graceful degradation" in one line but never maps WHAT degrades when WHICH dependency fails. Best-effort deps (email, push) should degrade, not 500 a user's write.
-- **Look for (this ship):** new routes/deps added with no degradation decision; best-effort work (push, email) on the critical request path so an email/push outage can fail a user write; a single failing dependency taking down unrelated routes (shared-fate); a fan-out cron whose per-item `catch` has no behavior for "whole batch fails" and no isolation between items.
-- **Fix direction:** verify the dependency-failure/blast-radius table (an Architecture Review artifact) still matches the code after this ship; move best-effort work off the critical path; flag any new dep with no fail-soft-vs-fail-hard decision. (Authoring the table is the Architecture Review's job; this pass checks drift.)
-- **Tools:** `dependency-cruiser` to see what imports each external client (blast-radius map); Hono route grouping for isolation; explicit try/catch with documented fail-soft vs fail-hard.
+- **What:** pass 8 mentions graceful degradation in one line but never maps WHAT degrades when WHICH dependency fails. Best-effort work (email, push, analytics) should degrade, not fail a user's write.
+- **Look for:** new deps with no fail-soft/fail-hard decision; best-effort work on the critical request path; one failing dependency taking down unrelated routes; batch jobs whose per-item failure handling is missing.
+- **Fix direction:** move best-effort work off the critical path; record a degrade decision per new dependency; check the blast-radius table (an Architecture Review artifact) still matches.
+- **Tools:** `dependency-cruiser` to see what imports each external client; explicit, documented try/catch policies.
 
-### 27. Accessibility Regression (mobile + web) — *did new screens keep their labels and font scaling?*
+### 27. Accessibility Regression — *did new screens keep their labels, focus, and text scaling?*
 > **Buckets:** accessibility
-- **What:** no other routine pass looks at a11y; store review and a real slice of users are affected. If the repo has its own a11y rules doc, check new code against it; otherwise use the checklist below.
-- **Look for (new/changed screens this ship):** RN touchables with no `accessibilityLabel`/`accessibilityRole`; icon-only buttons with no label; touch targets under 44pt; fixed font sizes/heights that clip OS Dynamic Type scaling (missing `maxFontSizeMultiplier`); color-only state signaling, contrast below WCAG AA; Next.js: missing `alt`, divs-as-buttons, modal focus traps, inputs with no associated label, keyboard-unreachable controls.
-- **Fix direction:** regression-check that new screens kept labels and didn't break font scaling; run automated baseline + spot-check VoiceOver/TalkBack on changed flows.
-- **Tools:** `eslint-plugin-jsx-a11y`, axe DevTools / `@axe-core/playwright` / Lighthouse a11y, Expo a11y inspector, VoiceOver/TalkBack manual sweep.
+- **What:** no other routine pass looks at accessibility, and a real slice of users (and, in the EU since June 2025, the European Accessibility Act) depend on it. If the repo has its own a11y rules, check against them; otherwise the checklist below plus the stack module's platform specifics.
+- **Look for (new/changed screens):** images without `alt`; icon-only buttons with no accessible name; `div`s used as buttons; inputs without labels; modals without focus management; keyboard-unreachable controls; color-only state; contrast below WCAG AA; fixed sizes that break when text is enlarged.
+- **Fix direction:** regression-check new screens; automated baseline plus a manual screen-reader spot check on changed flows.
+- **Tools:** `eslint-plugin-jsx-a11y`; axe DevTools / `@axe-core/playwright`; Lighthouse; VoiceOver/TalkBack/NVDA.
 
-### 28. Privacy & PII-Egress Regression — *did this ship leak PII into Sentry/logs/analytics?* (distinct from the authz security pass)
+### 28. Privacy & PII-Egress Regression — *did this ship leak PII into logs, error tracking, or analytics?*
 > **Buckets:** security
-- **What:** pass 10 covers authz/RLS; this covers PII leaving the system through telemetry, which pass 10 never looks at.
-- **Look for (this ship):** PII in Sentry breadcrumbs/event payloads (emails, tokens, user content); analytics events with raw PII; `console.log` of sensitive data in production builds; full request bodies in Vercel/serverless logs; new tracking SDK firing before ATT/consent gating; App Store Privacy / Play Data Safety declarations drifting from the actual SDK/collection set; a working GDPR account/data-deletion path that respects RLS.
-- **Fix direction:** verify Sentry `beforeSend` scrubbing/denylist still covers new event shapes; strip PII from new analytics events; confirm consent gating fires before tracking init; reconcile store privacy declarations against any new SDK.
-- **Tools:** Sentry `beforeSend`/data-scrubbing config; a PII grep over new log+analytics call sites; `expo-tracking-transparency`; App Store Privacy & Play Data Safety checklists.
+- **What:** pass 10 covers who can access data; this covers PII leaving through telemetry, which pass 10 never looks at.
+- **Look for:** PII in error-tracker payloads (emails, tokens, user content); raw PII in analytics events; logging of sensitive data or full request bodies; tracking that fires before consent; prompts and AI responses containing user data sent to logs or third parties; a privacy policy or store privacy declaration that no longer matches what's collected; no working account/data-deletion path.
+- **Fix direction:** scrubbing in the error tracker's send hook; strip PII from analytics; consent before tracking; reconcile declarations; a real deletion path.
+- **Tools:** the error tracker's data-scrubbing config; a PII grep over log/analytics call sites; the platform's privacy declaration checklist.
 
 ### 29. Docs & Agent-Instruction Currency — *a wrong AGENTS.md is a correctness bug for the next Claude*
 > **Buckets:** docs
-- **What:** the "many Claudes touched it" tax. Stale `CLAUDE.md`/`AGENTS.md`/`README` actively steer the next agent into the ditch — and they drift in nearly every actively-developed repo. In an agent-runnable codebase this is the highest-leverage routine doc check.
-- **Look for (diff against what changed this ship):** `CLAUDE.md`/`.claude/rules/*` describing architecture or conventions this ship changed; README setup steps or env-var docs now wrong; inline comments/JSDoc that now lie (e.g. an "idempotent" comment on a handler that still lacks the primitive); load-bearing decisions made this cycle with no short ADR.
-- **Fix direction:** reconcile `CLAUDE.md`/`.claude/rules` against what changed; do a clean-clone README smoke test if setup touched; delete or fix lying comments; capture any non-obvious decision as a one-paragraph ADR. Treat agent-facing docs as code under test.
-- **Tools:** fresh-clone README smoke test; ADR template (MADR); `CLAUDE.md`/rules reconciliation; JSDoc/comment review; a CHANGELOG.
+- **What:** the "many agents touched it" tax. Stale `CLAUDE.md`/`AGENTS.md`/`README` steer the next agent into the ditch, and they drift in nearly every actively developed repo.
+- **Look for:** agent instructions describing architecture or conventions that changed; README setup or env docs now wrong; comments that now lie (e.g. "idempotent" on a handler with no idempotency); load-bearing decisions with no short ADR.
+- **Fix direction:** reconcile agent docs against reality; clean-clone README smoke test if setup changed; fix or delete lying comments; one-paragraph ADRs for non-obvious decisions.
+- **Tools:** fresh-clone smoke test; MADR template; a CHANGELOG.
 
 ---
 

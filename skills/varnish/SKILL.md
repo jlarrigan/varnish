@@ -1,7 +1,7 @@
 ---
 name: varnish
-description: Varnish the current repo — run an engineering audit, review, or remediation plan using the Varnish playbooks. A finishing coat for shipped code. Types — launch (is this app safe to put in front of real users? plain-language go/no-go, built for people new to shipping), codebase audits by bucket (cleancode, architecture, security, reliability, scalability, delivery, accessibility, docs, all), feature (vertical per-feature audit), seo (marketing-site SEO + AI-search visibility), plan (turn findings reports into a remediation plan), architecture-review (the deep rebuild-vs-refactor review — distinct from the routine architecture bucket), compliance (SOC2/ISO/PCI/HIPAA precheck).
-argument-hint: <type> [scope]
+description: Varnish the current repo — run an engineering audit, review, or remediation plan using the Varnish playbooks. A finishing coat for shipped code. Types — launch (is this app safe to put in front of real users? plain-language go/no-go, built for people new to shipping), codebase audits by bucket (cleancode, architecture, security, reliability, scalability, delivery, accessibility, docs, all), feature (vertical per-feature audit), seo (marketing-site SEO + AI-search visibility), plan (turn findings reports into a remediation plan), architecture-review (the deep rebuild-vs-refactor review — distinct from the routine architecture bucket), compliance (SOC2/ISO/PCI/HIPAA precheck), status (progress across past runs: fixed, regressed, accepted, still open). Add `learn` to any run for a short lesson with each finding.
+argument-hint: <type> [scope] [learn]
 ---
 
 # Varnish — the finishing coat
@@ -23,8 +23,13 @@ Parse `$ARGUMENTS` as `<type> [scope...]` and dispatch:
 | `plan` · `remediate` | `${CLAUDE_PLUGIN_ROOT}/playbooks/remediation-plan.md` | Scope = a report file in `audits/`, or "everything since <date>". Default: all reports newer than the newest existing plan; if no plan exists yet, all reports in `audits/`. |
 | `architecture-review` | `${CLAUDE_PLUGIN_ROOT}/playbooks/architecture-review.md` | The deep, run-rarely judgment call. NOT the routine `architecture` bucket — confirm with the user if ambiguous (see below). |
 | `compliance` | `${CLAUDE_PLUGIN_ROOT}/playbooks/compliance-review.md` | CIS v8 → SOC2/ISO/PCI/HIPAA precheck. |
+| `status` (alias: `progress`) | `${CLAUDE_PLUGIN_ROOT}/playbooks/status.md` | Progress across past runs in `audits/`: fixed, came back, accepted, still open. Cheap; reads reports, spot-checks the code. |
 
 **Also load** `${CLAUDE_PLUGIN_ROOT}/playbooks/_report-shape.md` whenever running any Audit type (codebase buckets, `feature`, `seo`) — it is the shared report contract every Audit writes — and on `launch` (for the severity scale, the contain-today rules, and the footer). A `compliance` run additionally loads `codebase-audit.md` (its reuse rows run passes from there); a `plan` run may load `_report-shape.md` (the contract of the reports it consumes). _(If not installed as a plugin, resolve these paths relative to this file's repo: `playbooks/` sits two levels up.)_
+
+**Stack modules.** Before running any Audit, Review, or `launch`, detect the stack and load the matching modules from `${CLAUDE_PLUGIN_ROOT}/playbooks/stacks/` — the signals table is in `stacks/_index.md`. Load only the modules that match; record them in the report header. (`plan` and `status` don't need them.)
+
+**Learn mode.** If `learn` appears anywhere in `$ARGUMENTS` (e.g. `varnish security learn`), strip it from the scope and run the playbook with Learn mode on, as defined in `_report-shape.md`. `launch` runs with Learn mode on by default.
 
 **Ambiguity rule:** `varnish architecture` means the routine codebase-audit *bucket*. If the user's phrasing suggests the deep review ("should we rebuild", "review the architecture", "is the design right"), ask one clarifying question before running — the two differ in cost by an order of magnitude.
 
@@ -52,7 +57,7 @@ The fixing happens after the remediation plan, in normal sessions, where the use
 1. **Run in the target repo.** All output paths (`audits/…`) are relative to the current repo root.
 2. **Adversarially verify findings** before writing the report, exactly as the playbook specifies, and report the tally (N raw → M kept, K dropped, J adjusted, A added by the verifier). (Reviews and plans use their own verification models — a plan explicitly does NOT re-verify.)
 3. **Respect prior decisions** (Audits and `launch`): before writing findings, check `audits/*-plan-*.md` for Accepted-Risk Ledgers and Disputed sections, per `_report-shape.md`.
-4. **After any Audit completes**, close by offering the next step: _"Run `varnish plan` to turn this report into a remediation plan."_ (`launch` uses its own next-step text, which already includes this.)
+4. **After any Audit completes**, the report's own Handoff section carries the next step (don't add a second one to the file); in the chat, offer: _"Run `varnish plan` to turn this report into a remediation plan."_ (`launch` uses its own next-step text, which already includes this.)
 5. **Version stamps** use the `version` in `${CLAUDE_PLUGIN_ROOT}/.claude-plugin/plugin.json`.
 6. The playbooks' code examples are grounded in one example stack (React Native · serverless API · Postgres). Treat them as **principles** and translate to THIS repo's stack; mark inapplicable passes N/A with a reason, never force a finding. **Client-direct backends (Supabase, Firebase) are a valid architecture** — see pass 5 in `codebase-audit.md` for how to judge them.
 7. **Every report and plan ends with the author footer** defined in `_report-shape.md`.

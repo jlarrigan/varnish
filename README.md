@@ -23,12 +23,15 @@ Open Claude Code in the repo you want audited and pick a lane. **New to shipping
 | `/varnish security` | One bucket: `cleancode · architecture · security · reliability · scalability · delivery · accessibility · docs` |
 | `/varnish feature <name>` | Vertical audit of ONE feature, every dimension, graded A–D. Run it pre-merge |
 | `/varnish seo` | Marketing-site SEO + AI-search visibility (every finding carries an evidence tier) |
+| `/varnish status` | Progress across past runs: what's fixed, what came back, what you decided to fix and haven't, what's still open. Cheap, changes nothing |
 | `/varnish plan` | **The second half:** turns your findings reports into a remediation plan |
 | `/varnish architecture-review` | The deep, run-rarely judgment: rebuild vs refactor |
 | `/varnish compliance` | Where you roughly stand vs SOC2 / ISO 27001 / PCI / HIPAA |
 | `/varnish everything` | The full codebase audit, every bucket in one sweep. Long and token-heavy; Claude confirms before starting |
 
 **Audits only look; they never change your code.** Every run is read-only except for writing its report to `audits/`: no edits, no commits, no installs, no deploys, read-only database queries, and Claude asks before touching any live account (Supabase, Vercel, Stripe…). Fixing happens afterwards, in a normal session, when you decide.
+
+**Add `learn` to any command** (`/varnish security learn`) and every finding comes with a short lesson: the general principle, and how to spot it yourself next time. `launch` does this by default.
 
 **Built your app in Lovable, Bolt, or v0?** Connect it to GitHub, clone the repo to your computer, open Claude Code in that folder, and run `/varnish launch`. The report's fix prompts can be pasted straight back into your builder.
 
@@ -93,11 +96,8 @@ Audits **find**; the plan **decides**; you (and your agent) **fix**. Detection, 
 
 ## Other ways to use this
 
-- **No plugin, just playbooks:** clone the repo, then in your target repo's session:
-  ```
-  Read <path-to-this-repo>/playbooks/codebase-audit.md and run the reliability audit on this repo.
-  ```
-  _(Claude will ask permission to read outside the repo; allow it.)_
+- **Cursor, Codex, Copilot, Gemini CLI, Windsurf:** clone this repo once (`git clone https://github.com/jlarrigan/varnish ~/varnish`), then tell your agent: _"Read ~/varnish/START.md and run varnish launch on this project."_ [`START.md`](START.md) also has a three-line snippet for your project's `AGENTS.md` or a Cursor rule so "varnish launch" works by name.
+- **Claude Code without the plugin:** same clone, then _"Read ~/varnish/START.md and run varnish security on this repo."_ _(Claude will ask permission to read outside the repo; allow it.)_
 - **As reading**: every playbook stands alone as a written process a human can follow.
 
 ## Why this exists
@@ -156,6 +156,8 @@ This dissolves the "one doc vs two docs" question: the **passes are the data**, 
 **Beyond the Codebase Audit's buckets**, each other playbook routes to its own file: `feature` (`feature-audit.md`, all 8 dimensions *vertically* on one feature's slice), `seo` (`seo-audit.md`, the marketing-site visibility audit), and the Reviews `launch` (`launch-review.md`), `architecture-review` (`architecture-review.md`), and `compliance` (`compliance-review.md`). So the skill's full type set is: `launch` · the Codebase Audit buckets · `feature` · `seo` · `plan` (`remediation-plan.md`, the loop's second half) · `architecture-review` · `compliance`.
 
 **Convention for new passes:** add the pass to `codebase-audit.md` with a `> **Buckets:**` tag line. That tag *is* the routing; there's no separate table to keep in sync.
+
+**Stack modules** (`playbooks/stacks/`): the core passes are stack-neutral; each module adds one platform's exact files, key formats, settings, and traps, keyed by pass number, and loads only when its signals are found (`stacks/_index.md`). Today: Next.js, Vite SPAs (incl. Lovable/Bolt/v0), Expo/React Native, Node API servers, Vercel/serverless, Supabase, Firebase, payments, AI/LLM. A web app never reads about OTA updates; a mobile app never reads about server actions. Add a stack by adding a module.
 
 ## The audit → report → action loop
 Don't stop at "run the audit." Each audit **writes its findings to a structured report**: an `audits/` folder with a file per run named `<YYYY-MM-DD>-<bucket>-<HHMM>.md` (e.g. `audits/2026-06-25-cleancode-1455.md`: date + bucket + time so same-day re-runs and different buckets never collide): findings grouped by area, each tagged severity + cost-of-doing-nothing with its location, plus before/after metrics. That report is the **handoff**: `remediation-plan.md` turns the findings into decisions and solutions, including the upstream fixes that collapse a cluster at once. (A freehand brainstorm is the ancestry; the playbook is the mechanism.)
