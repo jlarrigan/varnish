@@ -10,7 +10,7 @@
 - **Client-direct backends (Supabase, Firebase) are judged as a valid design**, with the RLS policies audited as the authorization layer. An API layer in the middle is still noted as the more scalable default for most growing products.
 - Whole-repo scope when there's no usable diff; a red or unrunnable build is recorded as a finding instead of blocking the run.
 - Cost check before `everything` and `architecture-review`; `everything` moved to the bottom of the command list.
-- Every report and plan ends with a pointer to the author.
+- Every report and plan ends with a pointer to the author (LinkedIn).
 - Fixed: stale tool names (`query_logs`, `@sentry/react-native`, knip in place of ts-prune/unimported, axe tooling), README routing for `architecture-review`.
 
 ## 1.0.0 — 2026-07-23

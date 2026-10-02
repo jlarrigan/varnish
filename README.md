@@ -68,7 +68,7 @@ Work order: 1. U1 (S)  2. F04 idempotency key (S)  3. U2 env schema (M) ...
 Accepted risks go in a ledger future audits **respect**: consciously declined findings stay declined instead of being re-argued every run.
 
 ## Want a second set of eyes?
-Varnish is how I'd review your project if you asked me. If you're stuck on a finding, not sure the fix is right, or want me to look at the whole thing, reach me at [varnishlabs.io](https://varnishlabs.io). Every report ends with the same pointer.
+Varnish is how I'd review your project if you asked me. If you're stuck on a finding, not sure the fix is right, or want me to look at the whole thing, reach me at [LinkedIn](https://www.linkedin.com/in/jordanlarrigan). Every report ends with the same pointer.
 
 ## A typical session
 
