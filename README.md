@@ -90,6 +90,12 @@ claude> Plan written to audits/2026-07-23-plan-1115.md
 
 you>  fix the quick wins
       … now it's a normal coding session, working off the plan …
+
+      (a week later)
+you>  /varnish status
+claude> Since 07-23: 11 found · 4 look fixed · 3 accepted · 1 deferred · 3 decided-not-done
+        🆕 2 new API routes since the last reliability run, not reviewed yet.
+        Next run: /varnish reliability (confirms the 4 fixes, covers the new routes).
 ```
 
 Audits **find**; the plan **decides**; you (and your agent) **fix**. Detection, decision, and repair stay separate on purpose. That's what keeps each one honest.
@@ -124,12 +130,20 @@ Each playbook maps a **stage of building a product or running a tech org**: what
 **The Planner** (the Audits' shared second half):
 - `playbooks/remediation-plan.md`: the **deciding** step every Audit hands off to. Takes one or more findings reports and returns a plan: every finding dispositioned (`fix / accept / defer` + `disputed`, accept is first-class), fix-clusters hunted for **upstream solutions** (the ladder: point fix → shared abstraction → structural change → guardrail that kills the class), effort assigned *to chosen solutions*, quick-wins-first work order, and a durable **Accepted-Risk Ledger** future audits respect. Born from re-prompting the same two instructions after every audit (2026-07-21).
 
+**Status** (reads the loop's history):
+- `playbooks/status.md`: **progress across every run** in `audits/`: what came back, new code nobody has audited yet, what a plan decided to fix and hasn't, what looks fixed (unconfirmed until a re-run), ledger triggers that fired, and the one run worth doing next. Reads the reports plus a quick look at the code; writes nothing.
+
 **Reviews** (own shape each):
 - `playbooks/launch-review.md`: the **pre-launch go/no-go** for people shipping their first app, often built with AI. Twelve checks drawn from what actually sinks new apps (open databases, public secret keys, routes anyone can call, fakeable payments, AI endpoints billing you, no backups, fake packages), written in plain English with a paste-able fix prompt per finding, a required "couldn't check" list, and a 🛑 HOLD / 🟡 FIX THEN SHIP / 🟢 SHIP verdict.
 - `playbooks/architecture-review.md`: the **deep, run-rarely** design judgment: "is this the right system, built right, and should we rebuild any of it before we keep paying to extend it?" Ends in a rebuild-vs-refactor ledger. Run rarely (new system, inherited codebase, post-rewrite).
 - `playbooks/compliance-review.md`: a **technical compliance precheck**: per technical control, where you roughly stand across **SOC2 / ISO 27001 / PCI DSS / HIPAA** at once (backbone = CIS Controls v8). A gut-check to get *ahead* of an audit; explicitly **not** an attestation, repo-observable controls only.
 
-- _More to come: project kickoff, feature build, release/ship, incident response, running the org, hiring, code review… (TBD)_
+**Supporting files:**
+- `playbooks/_report-shape.md`: the shared report contract (two-axis tags, contain-today, plain-English lines, Learn mode, the author footer).
+- `playbooks/stacks/`: the stack modules (see [The skill layer](#the-skill-layer)).
+- `START.md`: the entry point for Cursor, Codex, Copilot, Gemini CLI, and Windsurf.
+
+- _More to come: incident response, project kickoff, a help-request bundle for sending me a project, guided fixing, release/ship, running the org, hiring… (TBD)_
 
 ## Which one? Codebase Audit vs Architecture Review
 They cover overlapping *topics* (architecture, reliability, …) but ask different *questions*:
@@ -153,7 +167,7 @@ This dissolves the "one doc vs two docs" question: the **passes are the data**, 
 
 **Audit types to route by:** the buckets are **inline in `codebase-audit.md`**: a bucket table at the top, and a `> Buckets:` tag on every pass (`cleancode`, `architecture`, `security`, `reliability`, `scalability`, `delivery`, `accessibility`, `docs`, plus `all`). A pass can belong to several buckets; the skill just runs the passes tagged with the requested one. **Wide coverage is intended**; a pass that doesn't apply gets marked N/A, not forced.
 
-**Beyond the Codebase Audit's buckets**, each other playbook routes to its own file: `feature` (`feature-audit.md`, all 8 dimensions *vertically* on one feature's slice), `seo` (`seo-audit.md`, the marketing-site visibility audit), and the Reviews `launch` (`launch-review.md`), `architecture-review` (`architecture-review.md`), and `compliance` (`compliance-review.md`). So the skill's full type set is: `launch` · the Codebase Audit buckets · `feature` · `seo` · `plan` (`remediation-plan.md`, the loop's second half) · `architecture-review` · `compliance`.
+**Beyond the Codebase Audit's buckets**, each other playbook routes to its own file: `feature` (`feature-audit.md`, all 8 dimensions *vertically* on one feature's slice), `seo` (`seo-audit.md`, the marketing-site visibility audit), and the Reviews `launch` (`launch-review.md`), `architecture-review` (`architecture-review.md`), and `compliance` (`compliance-review.md`). `status` reads the history (`status.md`). So the skill's full type set is: `launch` · the Codebase Audit buckets · `feature` · `seo` · `plan` (`remediation-plan.md`, the loop's second half) · `status` · `architecture-review` · `compliance`, and any of them takes `learn`.
 
 **Convention for new passes:** add the pass to `codebase-audit.md` with a `> **Buckets:**` tag line. That tag *is* the routing; there's no separate table to keep in sync.
 
@@ -167,7 +181,7 @@ Don't stop at "run the audit." Each audit **writes its findings to a structured 
 - It leaves a **record**: what was found, when, what got fixed, the before/after numbers.
 - The report is a **clean interface**: a brainstorm can consume it, a human can, a future agent can. Mirrors a detect→spec→plan flow.
 
-**Where the overthinking risk actually is:** building a heavy status-tracking system on top of it. Don't. Keep it a plain dated markdown report. The skill just has to *write* the file; what consumes it can be as simple as "now brainstorm this."
+**Where the overthinking risk actually is:** building a heavy status-tracking system on top of it. Don't. Keep it a plain dated markdown report. The skill just has to *write* the file; what consumes it can be as simple as "now brainstorm this." (`/varnish status` follows that rule: no database, no tracker, it just reads the same markdown reports and plans.)
 
 **Full shape:** `varnish <type>` (skill) → runs the matching passes → writes `audits/<YYYY-MM-DD>-<type>[-<scope>]-<HHMM>.md` → **run `remediation-plan.md` on it** (disposition every finding, hunt upstream fixes, sequence) → implement off the plan. The deciding step used to be a freehand brainstorm re-prompted every time ("what's worth doing? what's the fix one or two steps up?"); it's now a playbook, so it runs the same way every time and leaves an Accepted-Risk Ledger the next audit respects.
 
